@@ -117,13 +117,44 @@ gcc -I../freertos/include \
 
 ```text
 FreeRTOS started EDF Scheduler
+ T1 J1 released at 0  exec=2  deadline=10
+ T2 J1 released at 0  exec=2  deadline=20
+ T3 J1 released at 0  exec=3  deadline=80
+ T1 J1  DONE  at 2
+ T2 J1  DONE  at 4
+ T3 J1  DONE  at 7
+ IDLE      7 -> 10  (duration=3)
+ T1 J2 released at 10  exec=2  deadline=20
+ T1 J2  DONE  at 12
+ SHUTDOWN  12 -> 28  (duration=16)
+ T1 J3 released at 20  exec=2  deadline=30
+ T2 J2 released at 20  exec=3  deadline=40
+ T1 J3  DONE  at 30
+ T1 J4 released at 30  exec=1  deadline=40
+ T1 J4  DONE  at 31
+ T2 J2  DONE  at 34
+ IDLE      34 -> 40  (duration=6)
+ T1 J5 released at 40  exec=1  deadline=50
+ T2 J3 released at 40  exec=3  deadline=60
+ T1 J5  DONE  at 41
+ T2 J3  DONE  at 44
+ IDLE      44 -> 50  (duration=6)
+ T1 J6 released at 50  exec=2  deadline=60
+ T1 J6  DONE  at 52
+ SHUTDOWN  52 -> 68  (duration=16)
+ T1 J7 released at 60  exec=1  deadline=70
+ T2 J4 released at 60  exec=3  deadline=80
+ T1 J7  DONE  at 69
+ T1 J8 released at 70  exec=1  deadline=80
+ Preemption point at 70 (T2 J4 remaining=2)
+ T1 J8  DONE  at 71
+ T2 J4  DONE  at 73
+ IDLE      73 -> 80  (duration=7)
+ T1 J9 released at 80  exec=2  deadline=90
+ T2 J5 released at 80  exec=3  deadline=100
+ T3 J2 released at 80  exec=4  deadline=160
 
-T1 J1 released at 0
-T1 J1 DONE at 2
-
-SHUTDOWN 12 -> 28
-
-Preemption point at 70
+EDF execution completed
 ```
 
 ---
