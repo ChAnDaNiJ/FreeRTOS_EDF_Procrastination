@@ -2,52 +2,49 @@
 #include <stdlib.h>
 #include <math.h>
 #include <limits.h>
+
 #include "pq.h"
 #include "metrics.h"
 #include "procrastination.h"
 
 extern int useActual;
 
-
 #define SHUTDOWN_THRESHOLD 15
 
+/* --------------------------------------------------- */
+/* Find next arrival time                              */
+/* --------------------------------------------------- */
 
 static int findNextArrival(int currentTime, int hyperperiod)
 {
     int next = hyperperiod;
+
     for (int i = 0; i < numTasks; i++)
     {
-        int p          = taskSet[i].period;
-        int nextRelease = ((currentTime / p) + 1) * p;
+        int p = taskSet[i].period;
+
+        int nextRelease =
+            ((currentTime / p) + 1) * p;
+
         if (nextRelease < next)
             next = nextRelease;
     }
+
     return next;
 }
 
+/* --------------------------------------------------- */
+/* Release jobs at current tick                        */
+/* --------------------------------------------------- */
 
-static int findNextArrivalInWindow(int currentTime, int limit)
+static void releaseJobs(PQ *pq, int time, int jobId[])
 {
-    int next = limit + 1;
-    for (int i = 0; i < numTasks; i++)
-    {
-        int p          = taskSet[i].period;
-        int nextRelease = ((currentTime / p) + 1) * p;
-        if (nextRelease <= limit && nextRelease < next)
-            next = nextRelease;
-    }
-    return next;
-}
-
-
-static int releaseJobs(PQ *pq, int time, int jobId[])
-{
-    int released = 0;
     for (int i = 0; i < numTasks; i++)
     {
         if (time % taskSet[i].period == 0)
         {
             Job j;
+
             j.taskId      = i + 1;
             j.jobId       = ++jobId[i];
             j.releaseTime = time;
@@ -58,12 +55,12 @@ static int releaseJobs(PQ *pq, int time, int jobId[])
 
             if (useActual)
             {
-                int minExec     = (int)ceil(0.4 * wcet);
-                int maxExec     = wcet;
-                j.remainingTime = rand() % (maxExec - minExec + 1) + minExec;
-                printf(" T%d J%d released at %d  exec=%d  deadline=%d\n",
-                       j.taskId, j.jobId, time,
-                       j.remainingTime, j.absDeadline);
+                int minExec = (int)ceil(0.4 * wcet);
+                int maxExec = wcet;
+
+                j.remainingTime =
+                    rand() % (maxExec - minExec + 1)
+                    + minExec;
             }
             else
             {
@@ -75,19 +72,32 @@ static int releaseJobs(PQ *pq, int time, int jobId[])
             j.lastExecTime   = -1;
             j.infoIndex      = infoCount;
 
-            info[infoCount++] = (JobInfo){
-                j.taskId, j.jobId,
-                time, 0, -1,
-                j.absDeadline, 0
+            info[infoCount++] = (JobInfo)
+            {
+                j.taskId,
+                j.jobId,
+                time,
+                0,
+                -1,
+                j.absDeadline,
+                0
             };
 
             pqPushEDF(pq, j);
-            released++;
+
+            printf(" T%d J%d released at %d  exec=%d  deadline=%d\n",
+                   j.taskId,
+                   j.jobId,
+                   time,
+                   j.remainingTime,
+                   j.absDeadline);
         }
     }
-    return released;
 }
 
+/* --------------------------------------------------- */
+/* Deadline checking                                   */
+/* --------------------------------------------------- */
 
 static int checkDeadlines(PQ *pq, int time)
 {
@@ -96,133 +106,219 @@ static int checkDeadlines(PQ *pq, int time)
         if (pq->data[i].remainingTime > 0 &&
             time >= pq->data[i].absDeadline)
         {
-            printf("\n DEADLINE MISSED: T%d J%d"
-                   " at time %d (deadline=%d)\n",
+            printf("\n DEADLINE MISSED: "
+                   "T%d J%d at time %d "
+                   "(deadline=%d)\n",
                    pq->data[i].taskId,
                    pq->data[i].jobId,
                    time,
                    pq->data[i].absDeadline);
+
             return 1;
         }
     }
+
     return 0;
 }
 
+/* --------------------------------------------------- */
+/* EDF Scheduler                                       */
+/* --------------------------------------------------- */
 
 void edfScheduler(int hyperperiod)
 {
-    PQ  pq;
+    PQ pq;
     pqInit(&pq);
 
-    int time             = 0;
+    int time = 0;
+
     int jobId[MAX_TASKS] = {0};
 
-    releaseJobs(&pq, time, jobId);
+    Job currentJob;
+    int hasRunningJob = 0;
 
-    while (time < hyperperiod)
+    printf("EDF Scheduler Started\n");
+
+    while (time <= hyperperiod)
     {
+        printf("\n[Scheduler] Tick: %d\n", time);
+
+        /* ---------------------------------------- */
+        /* Release periodic jobs                    */
+        /* ---------------------------------------- */
+
+        releaseJobs(&pq, time, jobId);
+
+        /* ---------------------------------------- */
+        /* Deadline check                           */
+        /* ---------------------------------------- */
+
         if (checkDeadlines(&pq, time))
             return;
 
+        /* ---------------------------------------- */
+        /* If no running job, pick next EDF job     */
+        /* ---------------------------------------- */
 
-        if (pqEmpty(&pq))
+        if (!hasRunningJob)
         {
-            int NSI = calculateNSI(taskSet, numTasks,
-                                   time, SHUTDOWN_THRESHOLD);
-
-            if (NSI > time && NSI <= hyperperiod)
+            if (!pqEmpty(&pq))
             {
-   
-                printf(" SHUTDOWN  %d -> %d  (duration=%d)\n",
-                       time, NSI, NSI - time);
+                currentJob = pqPopEDF(&pq);
 
-                sched[schedSize++] = (Schedule){
-                    time, NSI, -2, -1, 1
-                };
+                hasRunningJob = 1;
 
-                int shutdownStart = sched[schedSize - 1].start;
-                time = NSI;
+                if (currentJob.firstStartTime == -1)
+                {
+                    currentJob.firstStartTime = time;
 
+                    info[currentJob.infoIndex]
+                        .firstStartTime = time;
+                }
 
-                for (int t = shutdownStart + 1; t <= NSI; t++)
-                    releaseJobs(&pq, t, jobId);
+                printf(" -> Running T%d J%d\n",
+                       currentJob.taskId,
+                       currentJob.jobId);
+            }
+        }
+
+        /* ---------------------------------------- */
+        /* Execute 1 tick                           */
+        /* ---------------------------------------- */
+
+        if (hasRunningJob)
+        {
+            currentJob.remainingTime--;
+
+            currentJob.totalExecution++;
+
+            info[currentJob.infoIndex]
+                .totalExecution++;
+
+            /* -------------------------------- */
+            /* Job completed                    */
+            /* -------------------------------- */
+
+            if (currentJob.remainingTime == 0)
+            {
+                info[currentJob.infoIndex]
+                    .completionTime = time + 1;
+
+                printf(" T%d J%d DONE at %d\n",
+                       currentJob.taskId,
+                       currentJob.jobId,
+                       time + 1);
+
+                hasRunningJob = 0;
             }
             else
             {
+                /* ---------------------------- */
+                /* Check for preemption         */
+                /* ---------------------------- */
 
-                int nextArrival = findNextArrival(time, hyperperiod);
-                if (nextArrival > hyperperiod)
-                    nextArrival = hyperperiod;
+                if (!pqEmpty(&pq))
+                {
+                    Job top = pq.data[0];
 
-                printf(" IDLE      %d -> %d  (duration=%d)\n",
-                       time, nextArrival, nextArrival - time);
+                    if (
+                        top.absDeadline < currentJob.absDeadline ||
+                    
+                        (
+                            top.absDeadline ==
+                            currentJob.absDeadline &&
+                    
+                            top.taskId <
+                            currentJob.taskId
+                        )
+                    )
+                    {
+                        printf(" Preemption point at %d "
+                               "(T%d J%d remaining=%d)\n",
+                               time,
+                               currentJob.taskId,
+                               currentJob.jobId,
+                               currentJob.remainingTime);
 
-                sched[schedSize++] = (Schedule){
-                    time, nextArrival, -1, -1, 1
-                };
+                        pqPushEDF(&pq, currentJob);
 
-                time = nextArrival;
+                        currentJob = pqPopEDF(&pq);
 
-                releaseJobs(&pq, time, jobId);
+                        if (currentJob.firstStartTime == -1)
+                        {
+                            currentJob.firstStartTime = time + 1;
+
+                            info[currentJob.infoIndex]
+                                .firstStartTime = time + 1;
+                        }
+
+                        printf(" -> Running T%d J%d\n",
+                               currentJob.taskId,
+                               currentJob.jobId);
+                    }
+                }
             }
-
-            continue;
-        }
-
-   
-        Job j = pqPopEDF(&pq);
-
-        if (j.firstStartTime == -1)
-        {
-            j.firstStartTime = time;
-            info[j.infoIndex].firstStartTime = time;
-        }
-
-        int jobFinish = time + j.remainingTime;
-
-       
-        int nextArr = findNextArrivalInWindow(time, jobFinish - 1);
-
-        int runUntil;
-        if (nextArr <= jobFinish - 1)
-            runUntil = nextArr;     
-        else
-            runUntil = jobFinish;    
-
-        int ran = runUntil - time;
-
-        sched[schedSize++] = (Schedule){
-            time, runUntil, j.taskId, j.jobId, 0
-        };
-
-        j.remainingTime  -= ran;
-        j.totalExecution += ran;
-        j.lastExecTime    = runUntil - 1;
-        info[j.infoIndex].totalExecution += ran;
-
-        time = runUntil;
-
-        if (j.remainingTime == 0)
-        {
-            sched[schedSize - 1].isComplete = 1;
-            info[j.infoIndex].completionTime = time;
-            printf(" T%d J%d  DONE  at %d\n",
-                   j.taskId, j.jobId, time);
-
-            releaseJobs(&pq, time, jobId);
         }
         else
         {
-        
-            pqPushEDF(&pq, j);
+            /* ------------------------------------ */
+            /* Idle / Shutdown handling             */
+            /* ------------------------------------ */
 
-           
-            releaseJobs(&pq, time, jobId);
+            if (pqEmpty(&pq))
+            {
+                int NSI =
+                    calculateNSI(taskSet,
+                                 numTasks,
+                                 time,
+                                 SHUTDOWN_THRESHOLD);
 
-            printf(" Preemption point at %d"
-                   " (T%d J%d remaining=%d)\n",
-                   time, j.taskId, j.jobId, j.remainingTime);
+                if (NSI > time &&
+                    NSI <= hyperperiod)
+                {
+                    printf(" SHUTDOWN  %d -> %d "
+                           "(duration=%d)\n",
+                           time,
+                           NSI,
+                           NSI - time);
+
+                    sched[schedSize++] =
+                    (Schedule)
+                    {
+                        time,
+                        NSI,
+                        -2,
+                        -1,
+                        1
+                    };
+
+                    int shutdownStart = time;
+
+                    time = NSI;
+
+                    /* ---------------------------- */
+                    /* IMPORTANT FIX                */
+                    /* Release jobs during sleep    */
+                    /* ---------------------------- */
+
+                    for (int t = shutdownStart + 1;
+                         t <= NSI;
+                         t++)
+                    {
+                        releaseJobs(&pq, t, jobId);
+                    }
+
+                    continue;
+                }
+                else
+                {
+                    printf(" IDLE\n");
+                }
+            }
         }
 
+        time++;
     }
+
+    printf("\nEDF execution completed\n");
 }

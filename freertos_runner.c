@@ -14,7 +14,7 @@ void schedulerTask(void *pvParameters)
 
     edfScheduler(hp);
 
-    printf("\nEDF execution completed\n");
+//    printf("\nEDF execution completed\n");
 
     while(1);
 }

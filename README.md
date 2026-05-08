@@ -117,42 +117,178 @@ gcc -I../freertos/include \
 
 ```text
 FreeRTOS started EDF Scheduler
+EDF Scheduler Started
+
+[Scheduler] Tick: 0
  T1 J1 released at 0  exec=2  deadline=10
  T2 J1 released at 0  exec=2  deadline=20
  T3 J1 released at 0  exec=3  deadline=80
- T1 J1  DONE  at 2
- T2 J1  DONE  at 4
- T3 J1  DONE  at 7
- IDLE      7 -> 10  (duration=3)
+ -> Running T1 J1
+
+[Scheduler] Tick: 1
+ T1 J1 DONE at 2
+
+[Scheduler] Tick: 2
+ -> Running T2 J1
+
+[Scheduler] Tick: 3
+ T2 J1 DONE at 4
+
+[Scheduler] Tick: 4
+ -> Running T3 J1
+
+[Scheduler] Tick: 5
+
+[Scheduler] Tick: 6
+ T3 J1 DONE at 7
+
+[Scheduler] Tick: 7
+ IDLE
+
+[Scheduler] Tick: 8
+ IDLE
+
+[Scheduler] Tick: 9
+ IDLE
+
+[Scheduler] Tick: 10
  T1 J2 released at 10  exec=2  deadline=20
- T1 J2  DONE  at 12
- SHUTDOWN  12 -> 28  (duration=16)
+ -> Running T1 J2
+
+[Scheduler] Tick: 11
+ T1 J2 DONE at 12
+
+[Scheduler] Tick: 12
+ SHUTDOWN  12 -> 28 (duration=16)
  T1 J3 released at 20  exec=2  deadline=30
  T2 J2 released at 20  exec=3  deadline=40
- T1 J3  DONE  at 30
+
+[Scheduler] Tick: 28
+ -> Running T1 J3
+
+[Scheduler] Tick: 29
+ T1 J3 DONE at 30
+
+[Scheduler] Tick: 30
  T1 J4 released at 30  exec=1  deadline=40
- T1 J4  DONE  at 31
- T2 J2  DONE  at 34
- IDLE      34 -> 40  (duration=6)
+ -> Running T1 J4
+ T1 J4 DONE at 31
+
+[Scheduler] Tick: 31
+ -> Running T2 J2
+
+[Scheduler] Tick: 32
+
+[Scheduler] Tick: 33
+ T2 J2 DONE at 34
+
+[Scheduler] Tick: 34
+ IDLE
+
+[Scheduler] Tick: 35
+ IDLE
+
+[Scheduler] Tick: 36
+ IDLE
+
+[Scheduler] Tick: 37
+ IDLE
+
+[Scheduler] Tick: 38
+ IDLE
+
+[Scheduler] Tick: 39
+ IDLE
+
+[Scheduler] Tick: 40
  T1 J5 released at 40  exec=1  deadline=50
  T2 J3 released at 40  exec=3  deadline=60
- T1 J5  DONE  at 41
- T2 J3  DONE  at 44
- IDLE      44 -> 50  (duration=6)
+ -> Running T1 J5
+ T1 J5 DONE at 41
+
+[Scheduler] Tick: 41
+ -> Running T2 J3
+
+[Scheduler] Tick: 42
+
+[Scheduler] Tick: 43
+ T2 J3 DONE at 44
+
+[Scheduler] Tick: 44
+ IDLE
+
+[Scheduler] Tick: 45
+ IDLE
+
+[Scheduler] Tick: 46
+ IDLE
+
+[Scheduler] Tick: 47
+ IDLE
+
+[Scheduler] Tick: 48
+ IDLE
+
+[Scheduler] Tick: 49
+ IDLE
+
+[Scheduler] Tick: 50
  T1 J6 released at 50  exec=2  deadline=60
- T1 J6  DONE  at 52
- SHUTDOWN  52 -> 68  (duration=16)
+ -> Running T1 J6
+
+[Scheduler] Tick: 51
+ T1 J6 DONE at 52
+
+[Scheduler] Tick: 52
+ SHUTDOWN  52 -> 68 (duration=16)
  T1 J7 released at 60  exec=1  deadline=70
  T2 J4 released at 60  exec=3  deadline=80
- T1 J7  DONE  at 69
+
+[Scheduler] Tick: 68
+ -> Running T1 J7
+ T1 J7 DONE at 69
+
+[Scheduler] Tick: 69
+ -> Running T2 J4
+
+[Scheduler] Tick: 70
  T1 J8 released at 70  exec=1  deadline=80
- Preemption point at 70 (T2 J4 remaining=2)
- T1 J8  DONE  at 71
- T2 J4  DONE  at 73
- IDLE      73 -> 80  (duration=7)
+ Preemption point at 70 (T2 J4 remaining=1)
+ -> Running T1 J8
+
+[Scheduler] Tick: 71
+ T1 J8 DONE at 72
+
+[Scheduler] Tick: 72
+ -> Running T2 J4
+ T2 J4 DONE at 73
+
+[Scheduler] Tick: 73
+ IDLE
+
+[Scheduler] Tick: 74
+ IDLE
+
+[Scheduler] Tick: 75
+ IDLE
+
+[Scheduler] Tick: 76
+ IDLE
+
+[Scheduler] Tick: 77
+ IDLE
+
+[Scheduler] Tick: 78
+ IDLE
+
+[Scheduler] Tick: 79
+ IDLE
+
+[Scheduler] Tick: 80
  T1 J9 released at 80  exec=2  deadline=90
  T2 J5 released at 80  exec=3  deadline=100
  T3 J2 released at 80  exec=4  deadline=160
+ -> Running T1 J9
 
 EDF execution completed
 ```
